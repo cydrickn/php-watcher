@@ -31,12 +31,12 @@ class Watcher
     }
 
 
-    public function addChange(string $filename, ChangeType $type): void
+    protected function addChange(string $filename, ChangeType $type): void
     {
         $this->changes[] = ['name' => $filename, 'type' => $type, 'data' => filemtime($filename)];
     }
 
-    public function checkFile(string $file): void
+    protected function checkFile(string $file): void
     {
         if (!array_key_exists($file, $this->files) && file_exists($file)) {
             $this->addChange($file, ChangeType::NEW);
@@ -60,12 +60,12 @@ class Watcher
         }
     }
 
-    public function clearChanges(): void
+    protected function clearChanges(): void
     {
         $this->changes = [];
     }
 
-    public function commit(): void
+    protected function commit(): void
     {
         $totalChanges = count($this->changes);
         foreach ($this->changes as $change) {
@@ -94,7 +94,7 @@ class Watcher
 
         foreach ($this->watchFor as $watchFor) {
             if (is_dir($watchFor)) {
-                $allFiles = new RecursiveTreeIterator(new RecursiveDirectoryIterator(__DIR__, RecursiveDirectoryIterator::SKIP_DOTS));
+                $allFiles = new RecursiveTreeIterator(new RecursiveDirectoryIterator($watchFor, RecursiveDirectoryIterator::SKIP_DOTS));
                 foreach ($allFiles as $file) {
                     $filename = trim(str_replace(['|', ' ', '~', '\\'], '', $file), '-');
                     $filename = is_dir($filename) ? $filename . '/' : $filename;
@@ -117,8 +117,11 @@ class Watcher
 
         $this->commit();
 
+        if (!$this->initialized) {
+            $this->initialized = true;
+        }
+
         $this->checking = false;
-        $this->initialized = true;
     }
 
     public function tick(?callable $handler = null): void
@@ -136,7 +139,7 @@ class Watcher
             $this->tick(function ($checkChanges, $interval) {
                 do {
                     call_user_func($checkChanges);
-                    sleep($interval);
+                    sleep($interval / 1000);
                 } while (true);
             });
         }
