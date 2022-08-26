@@ -115,6 +115,12 @@ class Watcher
             $this->checkFile($watchFor);
         }
 
+
+        // Checks the deleted files
+        foreach ($this->files as $key => $file) {
+            $this->checkFile($key);
+        }
+
         $this->commit();
 
         if (!$this->initialized) {
