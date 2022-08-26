@@ -33,7 +33,11 @@ class Watcher
 
     protected function addChange(string $filename, ChangeType $type): void
     {
-        $this->changes[] = ['name' => $filename, 'type' => $type, 'data' => filemtime($filename)];
+        $this->changes[] = [
+            'name' => $filename,
+            'type' => $type,
+            'data' => $type !== ChangeType::DELETED ? filemtime($filename) : null,
+        ];
     }
 
     protected function checkFile(string $file, bool $checkForDelete = false): void
