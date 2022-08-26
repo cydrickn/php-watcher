@@ -36,15 +36,19 @@ class Watcher
         $this->changes[] = ['name' => $filename, 'type' => $type, 'data' => filemtime($filename)];
     }
 
-    protected function checkFile(string $file): void
+    protected function checkFile(string $file, bool $checkForDelete = false): void
     {
-        if (!array_key_exists($file, $this->files) && file_exists($file)) {
-            $this->addChange($file, ChangeType::NEW);
+        if (array_key_exists($file, $this->files) && !file_exists($file)) {
+            $this->addChange($file, ChangeType::DELETED);
             return;
         }
 
-        if (array_key_exists($file, $this->files) && !file_exists($file)) {
-            $this->addChange($file, ChangeType::DELETED);
+        if ($checkForDelete) {
+            return;
+        }
+
+        if (!array_key_exists($file, $this->files) && file_exists($file)) {
+            $this->addChange($file, ChangeType::NEW);
             return;
         }
 
@@ -118,7 +122,7 @@ class Watcher
 
         // Checks the deleted files
         foreach ($this->files as $key => $file) {
-            $this->checkFile($key);
+            $this->checkFile($key, true);
         }
 
         $this->commit();
