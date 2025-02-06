@@ -1,7 +1,9 @@
 <?php
+declare(strict_types=1);
 
 namespace Cydrickn\PHPWatcher;
 
+use Cydrickn\PHPWatcher\Adapters\AdapterInterface;
 use Cydrickn\PHPWatcher\Enum\ChangeType;
 use RecursiveDirectoryIterator;
 use RecursiveTreeIterator;
@@ -13,12 +15,11 @@ class Watcher
     private array $changes = [];
     private bool $initialized = false;
     private bool $checking = false;
-
     private array $excludeFiles = [];
     private array $excludeDirs = [];
     private mixed $handler;
 
-    public function __construct(private array $watchFor, array $excludes, callable $handler, private int $interval = 1000)
+    public function __construct(private readonly AdapterInterface $adapter, private readonly array $watchFor, array $excludes, callable $handler, private readonly int $interval = 1000)
     {
         foreach ($excludes as $exclude) {
             if (is_dir($exclude)) {
@@ -29,7 +30,6 @@ class Watcher
         }
         $this->handler = $handler;
     }
-
 
     protected function addChange(string $filename, ChangeType $type): void
     {
@@ -63,7 +63,7 @@ class Watcher
         $data = $this->files[$file];
         $checkData = filemtime($file);
 
-        if ($checkData != $data) {
+        if ($checkData !== $data) {
             $this->addChange($file, ChangeType::UPDATED);
         }
     }
@@ -81,7 +81,6 @@ class Watcher
                 unset($this->files[$change['name']]);
                 continue;
             }
-
             $this->files[$change['name']] = $change['data'];
         }
 
@@ -106,11 +105,9 @@ class Watcher
                 foreach ($allFiles as $file) {
                     $filename = trim(str_replace(['|', ' ', '~', '\\'], '', $file), '-');
                     $filename = is_dir($filename) ? $filename . '/' : $filename;
-
                     if ((is_file($filename) && in_array($filename, $this->excludeFiles)) || (is_dir($filename) && in_array($filename, $this->excludeDirs))) {
                         continue;
                     }
-
                     foreach ($this->excludeDirs as $dir) {
                         if (str_starts_with($filename, $dir)) {
                             continue 2;
@@ -122,7 +119,6 @@ class Watcher
             }
             $this->checkFile($watchFor);
         }
-
 
         // Checks the deleted files
         foreach ($this->files as $key => $file) {
@@ -138,24 +134,8 @@ class Watcher
         $this->checking = false;
     }
 
-    public function tick(?callable $handler = null): void
+    public function tick(): void
     {
-        if ($handler !== null) {
-            call_user_func($handler, [$this, 'checkChanges'], $this->interval);
-            return;
-        }
-
-        if (class_exists(Timer::class)) {
-            Timer::tick($this->interval, function () {
-                $this->checkChanges();
-            });
-        } else {
-            $this->tick(function ($checkChanges, $interval) {
-                do {
-                    call_user_func($checkChanges);
-                    sleep($interval / 1000);
-                } while (true);
-            });
-        }
+        $this->adapter->tick([$this, 'checkChanges'], $this->interval);
     }
 }

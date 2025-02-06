@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Cydrickn\PHPWatcher\Enum;
 
 enum ChangeType: int

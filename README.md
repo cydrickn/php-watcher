@@ -2,6 +2,10 @@
 
 A simple directory and file watcher that was made using PHP.
 
+## Requirements
+
+* PHP >= 8.1
+
 ## Installation
 
 ```shell
@@ -17,7 +21,10 @@ To use this package you just need to initialize the watcher and call the tick fu
 
 require_once './vendor/autoload.php';
 
+use \Cydrickn\PHPWatcher\Adapters\SwooleTimerAdapter;
+
 $watcher = new \Cydrickn\PHPWatcher\Watcher(
+    new SwooleTimerAdapter(),
     [__DIR__],
     [__DIR__ . '/vendor/'],
     function (array $changes) {
@@ -28,79 +35,42 @@ $watcher = new \Cydrickn\PHPWatcher\Watcher(
 $watcher->tick();
 ```
 
-## \Cydrickn\PHPWatcher\Watcher::__construct
+## Adapters
 
-\Cydrickn\PHPWatcher\Watcher::__construct - Creates the instance representing the watcher
+Currently, we have 3 premade adapters:
 
-### Description
+### \Cydrickn\PHPWatcher\Adapters\SwooleTimerAdapter
 
-```php
-public \Cydrickn\PHPWatcher\Watcher::__construct(
-    array $watchFor,
-    array $excludes,
-    callable $handler,
-    int $interval = 1000
-)
-```
+If you are using Swoole/Openswoole then best choice to use this adapter
 
-### Parameters
+### \Cydrickn\PHPWatcher\Adapters\NativeAdapter
 
-**watchFor**
+If not using Swoole/Openswoole then you can go for this one, it uses PHP's do-while and sleep
 
-List of files and folder that will watch by the watcher.
+### \Cydrickn\PHPWatcher\Adapters\HybridAdapter
 
-For folders this will include its sub-folders.
+This is same as the version 1 where it will automatically use the SwooleTimerAdapter, if available or fallback to NativeAdapter.
+This might be useful in a mixed environment.
 
-**excludes**
+## Custom Adapter
 
-List of files and folder that will be excluded in watching.
-
-For folders this will include its sub-folders.
-
-**handler**
-
-A function that will be called once their are changes
-
-**interval**
-
-This is delay for how long it will wait before it will do checking of the files / folders. Default to 1000 milliseconds.
-
-## \Cydrickn\PHPWatcher\Watcher::checkChanges
-
-\Cydrickn\PHPWatcher\Watcher::checkChanges - Check the changes
-
-### Description
+If you don't want to use any pre-made adapter you can create your own adapter.
+Example:
 
 ```php
-public \Cydrickn\PHPWatcher\Watcher::checkChanges(): void
+<?php
+
+namespace Your\Namespace;
+
+use Cydrickn\PHPWatcher\Adapters\AdapterInterface;
+
+class YourAdapter implements AdapterInterface
+{
+    public function tick(callable $handler, int $interval = 1000)
+    {
+        // Implement your own logic
+        // Also make sure to call the handler to trigger the checking of changed files
+        // e.g. call_user_func($handler);
+    }
+}
 ```
-
-## \Cydrickn\PHPWatcher\Watcher::tick
-
-\Cydrickn\PHPWatcher\Watcher::tick - Start the watching of files
-
-### Description
-
-```php
-public \Cydrickn\PHPWatcher\Watcher::tick(
-    ?callable $handler = null
-): void
-```
-
-### Parameters
-
-**handler**
-
-A callable use for watching the file, this is default to null.
-
-Once the handler is null, it will use the default handler.
-
-There are two default handler.
-
-- Swoole\Timer - Will be only use when swoole is enabled in your server
-- The do while - If the swoole is not enabled
-
-Once you pass your own handler, this will pass two argument
-
-- The first argument would be the checkChanges function
-- The second is the interval
